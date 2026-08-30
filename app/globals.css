@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 20% 97%;
+    --foreground: 240 20% 8%;
+    --card: 40 25% 99%;
+    --card-foreground: 240 20% 8%;
+    --popover: 40 25% 99%;
+    --popover-foreground: 240 20% 8%;
+    --primary: 38 92% 48%;
+    --primary-foreground: 240 20% 8%;
+    --secondary: 240 10% 93%;
+    --secondary-foreground: 240 15% 18%;
+    --muted: 40 14% 92%;
+    --muted-foreground: 240 8% 42%;
+    --accent: 186 72% 40%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 10% 86%;
+    --input: 240 10% 86%;
+    --ring: 38 92% 48%;
+    --radius: 0.9rem;
+  }
+
+  .dark {
+    --background: 240 22% 5%;
+    --foreground: 40 20% 96%;
+    --card: 240 18% 8%;
+    --card-foreground: 40 20% 96%;
+    --popover: 240 18% 9%;
+    --popover-foreground: 40 20% 96%;
+    --primary: 38 92% 55%;
+    --primary-foreground: 240 22% 6%;
+    --secondary: 240 14% 14%;
+    --secondary-foreground: 40 15% 92%;
+    --muted: 240 12% 14%;
+    --muted-foreground: 240 8% 65%;
+    --accent: 186 80% 48%;
+    --accent-foreground: 240 22% 6%;
+    --destructive: 0 70% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 12% 18%;
+    --input: 240 12% 18%;
+    --ring: 38 92% 55%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  html.cursor-hidden,
+  html.cursor-hidden * {
+    cursor: none !important;
+  }
+
+  body {
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, hsl(38 92% 55% / 0.12), transparent),
+      radial-gradient(ellipse 40% 30% at 90% 20%, hsl(186 80% 48% / 0.08), transparent);
+  }
+}
+
+@layer components {
+  .glass {
+    @apply border border-white/10 bg-white/5 backdrop-blur-xl dark:bg-white/[0.04];
+  }
+
+  .glass-strong {
+    @apply border border-white/15 bg-white/70 shadow-xl backdrop-blur-2xl dark:bg-[#0c0c14]/80;
+  }
+
+  .gold-text {
+    @apply bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 bg-clip-text text-transparent;
+  }
+
+  .section-pad {
+    @apply px-4 py-20 sm:px-6 lg:px-8 lg:py-28;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
