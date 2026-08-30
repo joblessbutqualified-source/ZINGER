@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { mapProfileRow, toProfileRow, type ProfileRow } from "@/lib/chat/mappers";
 import { useAuthStore } from "@/lib/store/auth-store";
 import type { Profile } from "@/lib/types";
-import { isAdminEmail, isSupabaseConfigured, makeUsername } from "@/lib/utils";
+import { isAdminEmail, isSupabaseConfigured, isUuid, makeUsername } from "@/lib/utils";
 
 export async function getAuthUserId(): Promise<string | null> {
   const supabase = createClient();
@@ -15,6 +15,13 @@ export async function getAuthUserId(): Promise<string | null> {
     return null;
   }
   return data.user?.id ?? null;
+}
+
+export async function resolveAuthUserId(): Promise<string | null> {
+  const fromAuth = await getAuthUserId();
+  if (isUuid(fromAuth)) return fromAuth;
+  const stored = useAuthStore.getState().user?.id;
+  return isUuid(stored) ? stored : null;
 }
 
 export async function loadProfileForAuthUser(): Promise<Profile | null> {

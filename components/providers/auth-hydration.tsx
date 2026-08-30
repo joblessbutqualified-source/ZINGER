@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { loadProfileForAuthUser } from "@/lib/chat/auth-user";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { DEMO_AUTH_COOKIE, type Profile } from "@/lib/types";
-import { isAdminEmail, isSupabaseConfigured, makeUsername } from "@/lib/utils";
+import { isAdminEmail, isSupabaseConfigured, isUuid, makeUsername } from "@/lib/utils";
 
 function readCookie(): Profile | null {
   if (typeof document === "undefined") return null;
@@ -45,9 +45,9 @@ export function AuthHydration() {
   useEffect(() => {
     const finish = async () => {
       const current = useAuthStore.getState().user;
-      if (!current) {
+      if (!current || !isUuid(current.id)) {
         const fromCookie = readCookie();
-        if (fromCookie) setUser(fromCookie);
+        if (fromCookie && !useAuthStore.getState().user) setUser(fromCookie);
       }
       if (isSupabaseConfigured()) {
         await loadProfileForAuthUser();

@@ -6,7 +6,7 @@ import { useAuthStore } from "@/lib/store/auth-store";
 import { useDirectoryStore } from "@/lib/store/directory-store";
 import { toast } from "@/lib/store/toast-store";
 import type { Profile } from "@/lib/types";
-import { isSupabaseConfigured, isUsernameValid } from "@/lib/utils";
+import { isSupabaseConfigured, isUsernameValid, isUuid } from "@/lib/utils";
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
@@ -89,11 +89,6 @@ function fileToDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(new Error("Could not read file"));
     reader.readAsDataURL(file);
   });
-}
-
-function isUuid(id: string | undefined | null): boolean {
-  if (!id) return false;
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 }
 
 export async function fetchDirectoryFromSupabase(currentUserId?: string): Promise<Profile[]> {

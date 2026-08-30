@@ -7,7 +7,7 @@ import {
   DM_MESSAGE_CHANNEL,
   DM_PRESENCE_CHANNEL,
 } from "@/lib/chat/channels";
-import { getAuthUserId, loadProfileForAuthUser } from "@/lib/chat/auth-user";
+import { getAuthUserId, loadProfileForAuthUser, resolveAuthUserId } from "@/lib/chat/auth-user";
 import { mapChatRow, mapProfileRow, uid, type ChatRow, type ProfileRow } from "@/lib/chat/mappers";
 import { fetchDirectoryFromSupabase } from "@/lib/chat/profile-api";
 import { useAuthStore } from "@/lib/store/auth-store";
@@ -15,7 +15,7 @@ import { useDirectoryStore } from "@/lib/store/directory-store";
 import { useDmStore } from "@/lib/store/dm-store";
 import { toast } from "@/lib/store/toast-store";
 import type { ChatMessage, ChatUser, Profile } from "@/lib/types";
-import { isOnline, isSupabaseConfigured } from "@/lib/utils";
+import { isOnline, isSupabaseConfigured, isUuid } from "@/lib/utils";
 
 function conversationOrFilter(userId: string, peerId: string): string {
   return `and(sender_id.eq.${userId},receiver_id.eq.${peerId}),and(sender_id.eq.${peerId},receiver_id.eq.${userId})`;
@@ -41,15 +41,19 @@ export function useDirectMessages() {
       const supabase = createClient();
       if (!supabase || !live) return;
 
+      const safeSelf = isUuid(selfId) ? selfId : await resolveAuthUserId();
+      if (!isUuid(safeSelf)) return;
+      if (activePeerId && !isUuid(activePeerId)) return;
+
       let queryBuilder = supabase
         .from("chat_messages")
         .select("id, sender_id, receiver_id, message, created_at, is_read, read_at")
         .order("created_at", { ascending: true });
 
       if (activePeerId) {
-        queryBuilder = queryBuilder.or(conversationOrFilter(selfId, activePeerId));
+        queryBuilder = queryBuilder.or(conversationOrFilter(safeSelf, activePeerId));
       } else {
-        queryBuilder = queryBuilder.or(`sender_id.eq.${selfId},receiver_id.eq.${selfId}`);
+        queryBuilder = queryBuilder.or(`sender_id.eq.${safeSelf},receiver_id.eq.${safeSelf}`);
       }
 
       const { data, error } = await queryBuilder;
@@ -87,15 +91,15 @@ export function useDirectMessages() {
     const boot = async () => {
       setDirectoryLoading(true);
       try {
-        const authId = await getAuthUserId();
+        const authId = await resolveAuthUserId();
         if (cancelled) return;
         await loadProfileForAuthUser();
-        const selfId = authId ?? useAuthStore.getState().user?.id ?? sessionUserId;
-        const people = await fetchDirectoryFromSupabase(selfId);
+        const selfId = (await resolveAuthUserId()) ?? authId;
+        const people = await fetchDirectoryFromSupabase(selfId ?? sessionUserId);
         if (cancelled) return;
         useDirectoryStore.getState().replaceUsers(people);
 
-        if (!supabase) return;
+        if (!supabase || !isUuid(selfId)) return;
         await fetchMessages(selfId);
         if (cancelled) return;
 
@@ -253,14 +257,13 @@ export function useDirectMessages() {
       if (!updated.length) return;
       const supabase = createClient();
       if (supabase && live) {
+        const ids = updated.map((m) => m.id).filter(isUuid);
+        if (!ids.length) return;
         const readAt = updated[0]?.readAt ?? new Date().toISOString();
         const { error } = await supabase
           .from("chat_messages")
           .update({ is_read: true, read_at: readAt })
-          .in(
-            "id",
-            updated.map((m) => m.id)
-          );
+          .in("id", ids);
         if (error) console.error(error);
       }
     },
@@ -270,12 +273,15 @@ export function useDirectMessages() {
   const selectPeer = useCallback(
     (id: string | null) => {
       setPeerId(id);
-      if (id && user) {
-        void fetchMessages(user.id, id);
-        void markRead(id);
-      }
+      if (!id) return;
+      void (async () => {
+        const selfId = await resolveAuthUserId();
+        if (!isUuid(selfId) || !isUuid(id)) return;
+        await fetchMessages(selfId, id);
+        await markRead(id);
+      })();
     },
-    [fetchMessages, markRead, user]
+    [fetchMessages, markRead]
   );
 
   const sendMessage = useCallback(
@@ -291,6 +297,14 @@ export function useDirectMessages() {
           const err = new Error("No Supabase auth session — sign in again.");
           console.error(err);
           toast({ title: "Message not sent", description: err.message, variant: "error" });
+          return;
+        }
+        if (!isUuid(authId) || !isUuid(peerId)) {
+          toast({
+            title: "Message not sent",
+            description: "Sign in again to chat with this learner.",
+            variant: "error",
+          });
           return;
         }
         if (authId !== user.id) {
