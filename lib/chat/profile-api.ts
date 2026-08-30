@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { mapChatRow, mapProfileRow, type ChatRow, type ProfileRow } from "@/lib/chat/mappers";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useDirectoryStore } from "@/lib/store/directory-store";
+import { toast } from "@/lib/store/toast-store";
 import type { Profile } from "@/lib/types";
 import { isSupabaseConfigured, isUsernameValid } from "@/lib/utils";
 
@@ -94,29 +95,27 @@ export async function fetchDirectoryFromSupabase(currentUserId?: string): Promis
   const supabase = createClient();
   if (!supabase || !isSupabaseConfigured()) return [];
 
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) console.error(authError);
+
   const currentUser = {
-    id: currentUserId ?? useAuthStore.getState().user?.id,
+    id: currentUserId ?? authData.user?.id ?? useAuthStore.getState().user?.id,
   };
   if (!currentUser.id) return [];
 
-  try {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .neq("id", currentUser.id);
+  const { data, error } = await supabase.from("profiles").select("*").neq("id", currentUser.id);
 
-    if (error) {
-      console.error(error);
-      throw error;
-    }
-    if (!data) return [];
-    return (data as ProfileRow[])
-      .map(mapProfileRow)
-      .filter((p) => p.id !== currentUser.id);
-  } catch (err) {
-    console.error(err);
-    throw err;
+  if (error) {
+    console.error(error);
+    toast({
+      title: "Could not load people",
+      description: error.message,
+      variant: "error",
+    });
+    throw error;
   }
+  if (!data) return [];
+  return (data as ProfileRow[]).map(mapProfileRow).filter((p) => p.id !== currentUser.id);
 }
 
 export { mapChatRow, mapProfileRow };

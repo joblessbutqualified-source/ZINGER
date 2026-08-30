@@ -91,7 +91,9 @@ export function DirectMessages() {
             </div>
           ) : people.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-              No learners match that search.
+              {query.trim()
+                ? "No learners match that search."
+                : "No other registered users yet. When someone signs up, they will appear here."}
             </p>
           ) : (
             people.map((p) => (

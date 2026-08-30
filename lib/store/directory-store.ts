@@ -7,15 +7,15 @@ import { SEED_USER_IDS } from "@/lib/chat/seed-users";
 import { useAuthStore } from "@/lib/store/auth-store";
 import type { Profile } from "@/lib/types";
 
-function isRealDirectoryUser(user: Profile): boolean {
+function isDirectoryPeer(user: Profile): boolean {
   if (SEED_USER_IDS.has(user.id) || user.id.startsWith("usr_peer_")) return false;
   const currentUser = useAuthStore.getState().user;
   if (!currentUser) return true;
-  return user.id !== currentUser.id && user.email.toLowerCase() !== currentUser.email.toLowerCase();
+  return user.id !== currentUser.id;
 }
 
-function excludeSimulatedUsers(users: Profile[]): Profile[] {
-  return users.filter(isRealDirectoryUser);
+function realPeersOnly(users: Profile[]): Profile[] {
+  return users.filter(isDirectoryPeer);
 }
 
 function mergeUsers(base: Profile[], incoming: Profile[]): Profile[] {
@@ -29,7 +29,7 @@ function mergeUsers(base: Profile[], incoming: Profile[]): Profile[] {
       username: merged.username || merged.email.split("@")[0] || "learner",
     });
   }
-  return excludeSimulatedUsers(Array.from(map.values()));
+  return realPeersOnly(Array.from(map.values()));
 }
 
 function broadcast(channel: string, payload: unknown) {
@@ -52,10 +52,7 @@ export const useDirectoryStore = create<DirectoryState>()(
     (set, get) => ({
       users: [],
       upsertUser: (user) => {
-        const currentUser = useAuthStore.getState().user;
-        if (currentUser && (user.id === currentUser.id || user.email.toLowerCase() === currentUser.email.toLowerCase())) {
-          return;
-        }
+        if (!isDirectoryPeer(user)) return;
         const users = mergeUsers(get().users, [user]);
         set({ users });
         broadcast(DM_DIRECTORY_CHANNEL, user);
@@ -64,7 +61,7 @@ export const useDirectoryStore = create<DirectoryState>()(
         set({ users: mergeUsers(get().users, incoming) });
       },
       replaceUsers: (users) => {
-        set({ users: excludeSimulatedUsers(users) });
+        set({ users: realPeersOnly(users) });
       },
       touchPresence: (id, lastSeenAt, emit = false) => {
         const currentUser = useAuthStore.getState().user;
@@ -82,7 +79,7 @@ export const useDirectoryStore = create<DirectoryState>()(
         const stored = (persisted as { users?: Profile[] } | undefined)?.users ?? [];
         return {
           ...current,
-          users: excludeSimulatedUsers(stored),
+          users: realPeersOnly(stored),
         };
       },
     }

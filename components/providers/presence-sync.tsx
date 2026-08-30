@@ -53,11 +53,19 @@ export function PresenceSync() {
 
     void beat();
     if (live) {
-      void fetchDirectoryFromSupabase(userId)
-        .then((people) => {
+      void (async () => {
+        const supabase = createClient();
+        const { data: authData } = supabase
+          ? await supabase.auth.getUser()
+          : { data: { user: null } };
+        const selfId = authData.user?.id ?? userId;
+        try {
+          const people = await fetchDirectoryFromSupabase(selfId);
           useDirectoryStore.getState().replaceUsers(people);
-        })
-        .catch((err) => console.error(err));
+        } catch (err) {
+          console.error(err);
+        }
+      })();
     } else {
       useDirectoryStore.getState().replaceUsers([]);
     }

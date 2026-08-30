@@ -98,6 +98,11 @@ export function useDirectMessages() {
           const people = await fetchDirectoryFromSupabase(selfId);
           if (cancelled) return;
           useDirectoryStore.getState().replaceUsers(people);
+          if (people.length === 0) {
+            console.warn(
+              "DM directory is empty. Run supabase_dm_directory_rls.sql so authenticated users can SELECT profiles."
+            );
+          }
           await fetchMessages(selfId);
           if (cancelled) return;
 
@@ -126,7 +131,6 @@ export function useDirectMessages() {
                 event: "INSERT",
                 schema: "public",
                 table: "chat_messages",
-                filter: `sender_id=eq.${selfId}`,
               },
               (payload) => applyChatRow(payload.new as ChatRow)
             )
@@ -344,7 +348,7 @@ export function useDirectMessages() {
     const q = query.trim().toLowerCase();
     void tick;
     return directory
-      .filter((p) => p.id !== user.id && p.email.toLowerCase() !== user.email.toLowerCase())
+      .filter((p) => p.id !== user.id)
       .filter((p) => {
         if (!q) return true;
         return (
