@@ -5,7 +5,6 @@ import { DEMO_AUTH_COOKIE, type Profile } from "@/lib/types";
 import { isAdminEmail, isSupabaseConfigured, makeUsername } from "@/lib/utils";
 import { loadProfileForAuthUser } from "@/lib/chat/auth-user";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { useDirectoryStore } from "@/lib/store/directory-store";
 
 const COOKIE_MAX = 60 * 60 * 24 * 14;
 
@@ -43,7 +42,6 @@ function makeProfile(email: string, fullName: string, id?: string): Profile {
 function commitSession(user: Profile): Profile {
   useAuthStore.getState().setUser(user);
   const saved = useAuthStore.getState().user ?? user;
-  useDirectoryStore.getState().upsertUser(saved);
   writeSessionCookie(saved);
   return saved;
 }
@@ -68,7 +66,6 @@ export async function signUpWithPassword(input: {
     if (error) return { user: makeProfile(input.email, input.fullName), error: error.message };
     const profile = await loadProfileForAuthUser();
     if (profile) {
-      useDirectoryStore.getState().upsertUser(profile);
       writeSessionCookie(profile);
       return { user: profile };
     }
@@ -96,7 +93,6 @@ export async function signInWithPassword(input: {
     }
     const profile = await loadProfileForAuthUser();
     if (profile) {
-      useDirectoryStore.getState().upsertUser(profile);
       writeSessionCookie(profile);
       return { user: profile };
     }

@@ -22,7 +22,6 @@ export function PresenceSync() {
       const lastSeenAt = new Date().toISOString();
       const next = { ...current, lastSeenAt };
       useAuthStore.getState().setUser(next);
-      useDirectoryStore.getState().upsertUser(next);
       useDirectoryStore.getState().touchPresence(next.id, lastSeenAt, true);
 
       const supabase = createClient();
@@ -61,7 +60,7 @@ export function PresenceSync() {
         })
         .catch((err) => console.error(err));
     } else {
-      useDirectoryStore.getState().mergeRemote(getSeedUsers());
+      useDirectoryStore.getState().replaceUsers(getSeedUsers());
     }
 
     const id = window.setInterval(() => void beat(), 20_000);

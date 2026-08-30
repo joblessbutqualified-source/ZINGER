@@ -3,7 +3,16 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { DM_DIRECTORY_CHANNEL, DM_PRESENCE_CHANNEL } from "@/lib/chat/channels";
+import { useAuthStore } from "@/lib/store/auth-store";
 import type { Profile } from "@/lib/types";
+
+function excludeCurrentUser(users: Profile[]): Profile[] {
+  const currentUser = useAuthStore.getState().user;
+  if (!currentUser) return users;
+  const selfId = currentUser.id;
+  const selfEmail = currentUser.email.toLowerCase();
+  return users.filter((u) => u.id !== selfId && u.email.toLowerCase() !== selfEmail);
+}
 
 function mergeUsers(base: Profile[], incoming: Profile[]): Profile[] {
   const map = new Map<string, Profile>();
@@ -16,7 +25,7 @@ function mergeUsers(base: Profile[], incoming: Profile[]): Profile[] {
       username: merged.username || merged.email.split("@")[0] || "learner",
     });
   }
-  return Array.from(map.values());
+  return excludeCurrentUser(Array.from(map.values()));
 }
 
 function broadcast(channel: string, payload: unknown) {
@@ -39,6 +48,10 @@ export const useDirectoryStore = create<DirectoryState>()(
     (set, get) => ({
       users: [],
       upsertUser: (user) => {
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser && (user.id === currentUser.id || user.email.toLowerCase() === currentUser.email.toLowerCase())) {
+          return;
+        }
         const users = mergeUsers(get().users, [user]);
         set({ users });
         broadcast(DM_DIRECTORY_CHANNEL, user);
@@ -47,9 +60,11 @@ export const useDirectoryStore = create<DirectoryState>()(
         set({ users: mergeUsers(get().users, incoming) });
       },
       replaceUsers: (users) => {
-        set({ users });
+        set({ users: excludeCurrentUser(users) });
       },
       touchPresence: (id, lastSeenAt, emit = false) => {
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser && id === currentUser.id) return;
         set({
           users: get().users.map((u) => (u.id === id ? { ...u, lastSeenAt } : u)),
         });
@@ -63,7 +78,7 @@ export const useDirectoryStore = create<DirectoryState>()(
         const stored = (persisted as { users?: Profile[] } | undefined)?.users ?? [];
         return {
           ...current,
-          users: stored,
+          users: excludeCurrentUser(stored),
         };
       },
     }

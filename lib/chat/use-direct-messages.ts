@@ -93,11 +93,6 @@ export function useDirectMessages() {
           const people = await fetchDirectoryFromSupabase(selfId);
           useDirectoryStore.getState().replaceUsers(people);
           await fetchMessages(selfId);
-          const first = people[0];
-          if (first) {
-            setPeerId(first.id);
-            void fetchMessages(selfId, first.id);
-          }
         } catch (err) {
           console.error(err);
         } finally {
@@ -149,6 +144,7 @@ export function useDirectMessages() {
             const me = useAuthStore.getState().user;
             if (me && me.id === mapped.id) {
               useAuthStore.getState().setUser({ ...me, ...mapped });
+              return;
             }
             useDirectoryStore.getState().upsertUser(mapped);
           }
@@ -179,7 +175,13 @@ export function useDirectMessages() {
       }
     };
     const onDir = (ev: MessageEvent<Profile>) => {
-      if (ev.data?.id) useDirectoryStore.getState().mergeRemote([ev.data]);
+      const incoming = ev.data;
+      if (!incoming?.id) return;
+      const me = useAuthStore.getState().user;
+      if (me && (incoming.id === me.id || incoming.email.toLowerCase() === me.email.toLowerCase())) {
+        return;
+      }
+      useDirectoryStore.getState().mergeRemote([incoming]);
     };
     const onPres = (ev: MessageEvent<{ id: string; lastSeenAt: string }>) => {
       if (ev.data?.id) {
@@ -199,6 +201,18 @@ export function useDirectMessages() {
       presBc.close();
     };
   }, [user?.id, live, fetchMessages]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const { users, replaceUsers } = useDirectoryStore.getState();
+    if (
+      users.some(
+        (u) => u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase()
+      )
+    ) {
+      replaceUsers(users);
+    }
+  }, [user?.id, user?.email]);
 
   const markRead = useCallback(
     async (targetPeerId: string) => {
@@ -297,6 +311,7 @@ export function useDirectMessages() {
     const q = query.trim().toLowerCase();
     void tick;
     return directory
+      .filter((p) => p.id !== user.id && p.email.toLowerCase() !== user.email.toLowerCase())
       .filter((p) => {
         if (!q) return true;
         return (

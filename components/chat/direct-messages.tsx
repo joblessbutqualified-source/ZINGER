@@ -87,11 +87,11 @@ export function DirectMessages() {
           {directoryLoading ? (
             <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-sm text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              Loading learners…
+              Loading bots…
             </div>
           ) : people.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-              No learners match that search.
+              No bots match that search.
             </p>
           ) : (
             people.map((p) => (
@@ -117,7 +117,7 @@ export function DirectMessages() {
             <MessageCircle className="h-10 w-10 text-primary" />
             <p className="mt-4 font-display text-2xl">Your messages</p>
             <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-              Pick someone from the studio directory. Delivery is instant — no refresh.
+              Pick a bot from the directory to start a simulated conversation.
             </p>
           </div>
         ) : (

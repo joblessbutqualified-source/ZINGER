@@ -54,7 +54,6 @@ export async function saveProfile(patch: {
   }
 
   useAuthStore.getState().setUser(next);
-  useDirectoryStore.getState().upsertUser(next);
   return { user: next };
 }
 
@@ -91,19 +90,29 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-export async function fetchDirectoryFromSupabase(_currentUserId?: string): Promise<Profile[]> {
+export async function fetchDirectoryFromSupabase(currentUserId?: string): Promise<Profile[]> {
   const supabase = createClient();
   if (!supabase || !isSupabaseConfigured()) return [];
 
+  const currentUser = {
+    id: currentUserId ?? useAuthStore.getState().user?.id,
+  };
+  if (!currentUser.id) return [];
+
   try {
-    const { data, error } = await supabase.from("profiles").select("*");
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .neq("id", currentUser.id);
 
     if (error) {
       console.error(error);
       throw error;
     }
     if (!data) return [];
-    return (data as ProfileRow[]).map(mapProfileRow);
+    return (data as ProfileRow[])
+      .map(mapProfileRow)
+      .filter((p) => p.id !== currentUser.id);
   } catch (err) {
     console.error(err);
     throw err;
