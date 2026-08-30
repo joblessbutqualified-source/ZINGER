@@ -78,7 +78,29 @@ export function isOnline(lastSeenAt?: string | null, now = Date.now()): boolean 
 export function formatMessageTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
+  const time = new Intl.DateTimeFormat("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(d);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return time;
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return `Yesterday ${time}`;
+  return `${new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+  }).format(d)}, ${time}`;
+}
+
+export function formatMessageTimestamp(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
   return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
     hour: "numeric",
     minute: "2-digit",
     hour12: true,

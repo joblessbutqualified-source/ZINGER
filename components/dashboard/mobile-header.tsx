@@ -30,16 +30,16 @@ export function MobileHeader({ variant }: { variant: "student" | "admin" }) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <header className="fixed inset-x-0 top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl md:hidden">
-        <div className="flex h-16 items-center justify-between gap-3 px-3">
+        <div className="flex h-16 items-center justify-between gap-3 px-4">
           <div className="flex min-w-0 items-center gap-1">
+            <Link href="/" className="min-w-0 shrink-0" aria-label="Zinger home">
+              <ZingerLogo />
+            </Link>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Open navigation menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <Link href="/" className="min-w-0 shrink-0" aria-label="Zinger home">
-              <ZingerLogo />
-            </Link>
           </div>
           <ThemeToggle />
         </div>

@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDirectMessages } from "@/lib/chat/use-direct-messages";
 import type { ChatMessage, ChatUser } from "@/lib/types";
-import { cn, formatLastActive, formatMessageTime, isOnline } from "@/lib/utils";
+import { cn, formatLastActive, formatMessageTime, formatMessageTimestamp, isOnline } from "@/lib/utils";
 
 export function DirectMessages() {
   const {
@@ -59,10 +59,10 @@ export function DirectMessages() {
   };
 
   return (
-    <div className="flex h-full min-h-0 w-full overflow-hidden border-border/70 bg-card/40 shadow-2xl backdrop-blur-xl">
+    <div className="grid h-full min-h-0 w-full grid-cols-1 overflow-hidden border-border/70 bg-card/40 shadow-2xl backdrop-blur-xl md:grid-cols-[350px_minmax(0,1fr)]">
       <aside
         className={cn(
-          "h-full min-h-0 w-full flex-col md:w-[350px] md:shrink-0 md:border-r md:border-border/60",
+          "h-full min-h-0 min-w-0 flex-col md:border-r md:border-border/60",
           peerId ? "hidden md:flex" : "flex"
         )}
       >
@@ -70,7 +70,7 @@ export function DirectMessages() {
           <div className="flex items-center justify-between">
             <h1 className="font-display text-xl">Messages</h1>
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-              {live ? "Realtime" : "Live · demo"}
+              {live ? "Live" : "Offline"}
             </span>
           </div>
           <div className="relative mt-3">
@@ -87,11 +87,11 @@ export function DirectMessages() {
           {directoryLoading ? (
             <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-sm text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              Loading bots…
+              Loading people…
             </div>
           ) : people.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-              No bots match that search.
+              No learners match that search.
             </p>
           ) : (
             people.map((p) => (
@@ -108,8 +108,8 @@ export function DirectMessages() {
 
       <section
         className={cn(
-          "h-full min-h-0 min-w-0 flex-1 flex-col",
-          peerId ? "flex" : "hidden md:flex"
+          "h-full min-h-0 min-w-0 flex-col md:flex",
+          peerId ? "flex animate-in slide-in-from-right-4 duration-200 md:animate-none" : "hidden md:flex"
         )}
       >
         {!peer ? (
@@ -117,7 +117,7 @@ export function DirectMessages() {
             <MessageCircle className="h-10 w-10 text-primary" />
             <p className="mt-4 font-display text-2xl">Your messages</p>
             <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-              Pick a bot from the directory to start a simulated conversation.
+              Pick someone from the directory. Messages arrive live — no refresh.
             </p>
           </div>
         ) : (
@@ -247,7 +247,10 @@ function UserRow({
         <span className="flex items-center justify-between gap-2">
           <span className="truncate text-sm font-medium">{person.fullName}</span>
           {person.lastMessageAt ? (
-            <span className="shrink-0 text-[10px] text-muted-foreground">
+            <span
+              className="shrink-0 text-[10px] text-muted-foreground"
+              title={formatMessageTimestamp(person.lastMessageAt)}
+            >
               {formatMessageTime(person.lastMessageAt)}
             </span>
           ) : null}
@@ -289,7 +292,9 @@ function MessageBubble({ message, mine }: { message: ChatMessage; mine: boolean 
             mine ? "text-primary-foreground/70" : "text-muted-foreground"
           )}
         >
-          <span>{formatMessageTime(message.createdAt)}</span>
+          <span title={formatMessageTimestamp(message.createdAt)}>
+            {formatMessageTime(message.createdAt)}
+          </span>
           {mine ? (
             message.isRead ? (
               <>

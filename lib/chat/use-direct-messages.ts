@@ -82,78 +82,111 @@ export function useDirectMessages() {
 
     const supabase = createClient();
     if (supabase && live) {
+      let chats: ReturnType<typeof supabase.channel> | null = null;
+      let profiles: ReturnType<typeof supabase.channel> | null = null;
+      let cancelled = false;
+
       const boot = async () => {
         setDirectoryLoading(true);
         try {
           const authId = await getAuthUserId();
+          if (cancelled) return;
           if (authId && authId !== sessionUserId) {
             await loadProfileForAuthUser();
           }
           const selfId = authId ?? useAuthStore.getState().user?.id ?? sessionUserId;
           const people = await fetchDirectoryFromSupabase(selfId);
+          if (cancelled) return;
           useDirectoryStore.getState().replaceUsers(people);
           await fetchMessages(selfId);
+          if (cancelled) return;
+
+          const applyChatRow = (row: ChatRow | null | undefined) => {
+            if (!row?.id) return;
+            const involved = row.sender_id === selfId || row.receiver_id === selfId;
+            if (!involved) return;
+            useDmStore.getState().upsertMessage(mapChatRow(row));
+          };
+
+          chats = supabase
+            .channel(`dm:${selfId}`)
+            .on(
+              "postgres_changes",
+              {
+                event: "INSERT",
+                schema: "public",
+                table: "chat_messages",
+                filter: `receiver_id=eq.${selfId}`,
+              },
+              (payload) => applyChatRow(payload.new as ChatRow)
+            )
+            .on(
+              "postgres_changes",
+              {
+                event: "INSERT",
+                schema: "public",
+                table: "chat_messages",
+                filter: `sender_id=eq.${selfId}`,
+              },
+              (payload) => applyChatRow(payload.new as ChatRow)
+            )
+            .on(
+              "postgres_changes",
+              {
+                event: "UPDATE",
+                schema: "public",
+                table: "chat_messages",
+                filter: `sender_id=eq.${selfId}`,
+              },
+              (payload) => applyChatRow(payload.new as ChatRow)
+            )
+            .on(
+              "postgres_changes",
+              {
+                event: "UPDATE",
+                schema: "public",
+                table: "chat_messages",
+                filter: `receiver_id=eq.${selfId}`,
+              },
+              (payload) => applyChatRow(payload.new as ChatRow)
+            )
+            .subscribe((status, err) => {
+              if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+                console.error(err ?? new Error(`Realtime ${status}`));
+              }
+            });
+
+          profiles = supabase
+            .channel("zinger-profiles")
+            .on(
+              "postgres_changes",
+              { event: "*", schema: "public", table: "profiles" },
+              (payload) => {
+                if (payload.eventType === "DELETE") return;
+                const row = payload.new as ProfileRow;
+                if (!row?.id) return;
+                const mapped = mapProfileRow(row);
+                const me = useAuthStore.getState().user;
+                if (me && me.id === mapped.id) {
+                  useAuthStore.getState().setUser({ ...me, ...mapped });
+                  return;
+                }
+                useDirectoryStore.getState().upsertUser(mapped);
+              }
+            )
+            .subscribe();
         } catch (err) {
           console.error(err);
         } finally {
-          setDirectoryLoading(false);
+          if (!cancelled) setDirectoryLoading(false);
         }
       };
       void boot();
 
-      const chats = supabase
-        .channel(`chat-messages:${sessionUserId}`)
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "chat_messages" },
-          (payload) => {
-            const row = payload.new as ChatRow;
-            if (!row?.id) return;
-            const selfId = useAuthStore.getState().user?.id;
-            if (!selfId) return;
-            const involved = row.sender_id === selfId || row.receiver_id === selfId;
-            if (!involved) return;
-            useDmStore.getState().upsertMessage(mapChatRow(row));
-          }
-        )
-        .on(
-          "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "chat_messages" },
-          (payload) => {
-            const row = payload.new as ChatRow;
-            if (!row?.id) return;
-            useDmStore.getState().upsertMessage(mapChatRow(row));
-          }
-        )
-        .subscribe((status, err) => {
-          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-            console.error(err ?? new Error(`Realtime ${status}`));
-          }
-        });
-
-      const profiles = supabase
-        .channel("zinger-profiles")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "profiles" },
-          (payload) => {
-            if (payload.eventType === "DELETE") return;
-            const row = payload.new as ProfileRow;
-            if (!row?.id) return;
-            const mapped = mapProfileRow(row);
-            const me = useAuthStore.getState().user;
-            if (me && me.id === mapped.id) {
-              useAuthStore.getState().setUser({ ...me, ...mapped });
-              return;
-            }
-            useDirectoryStore.getState().upsertUser(mapped);
-          }
-        )
-        .subscribe();
-
       return () => {
-        void supabase.removeChannel(chats);
-        void supabase.removeChannel(profiles);
+        cancelled = true;
+        if (chats) void supabase.removeChannel(chats);
+        if (profiles) void supabase.removeChannel(profiles);
       };
     }
 

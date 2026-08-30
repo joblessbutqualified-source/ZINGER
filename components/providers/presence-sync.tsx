@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { loadProfileForAuthUser } from "@/lib/chat/auth-user";
 import { fetchDirectoryFromSupabase } from "@/lib/chat/profile-api";
-import { getSeedUsers } from "@/lib/chat/seed-users";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useDirectoryStore } from "@/lib/store/directory-store";
 import { isSupabaseConfigured } from "@/lib/utils";
@@ -60,7 +59,7 @@ export function PresenceSync() {
         })
         .catch((err) => console.error(err));
     } else {
-      useDirectoryStore.getState().replaceUsers(getSeedUsers());
+      useDirectoryStore.getState().replaceUsers([]);
     }
 
     const id = window.setInterval(() => void beat(), 20_000);

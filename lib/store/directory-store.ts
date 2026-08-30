@@ -3,15 +3,19 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { DM_DIRECTORY_CHANNEL, DM_PRESENCE_CHANNEL } from "@/lib/chat/channels";
+import { SEED_USER_IDS } from "@/lib/chat/seed-users";
 import { useAuthStore } from "@/lib/store/auth-store";
 import type { Profile } from "@/lib/types";
 
-function excludeCurrentUser(users: Profile[]): Profile[] {
+function isRealDirectoryUser(user: Profile): boolean {
+  if (SEED_USER_IDS.has(user.id) || user.id.startsWith("usr_peer_")) return false;
   const currentUser = useAuthStore.getState().user;
-  if (!currentUser) return users;
-  const selfId = currentUser.id;
-  const selfEmail = currentUser.email.toLowerCase();
-  return users.filter((u) => u.id !== selfId && u.email.toLowerCase() !== selfEmail);
+  if (!currentUser) return true;
+  return user.id !== currentUser.id && user.email.toLowerCase() !== currentUser.email.toLowerCase();
+}
+
+function excludeSimulatedUsers(users: Profile[]): Profile[] {
+  return users.filter(isRealDirectoryUser);
 }
 
 function mergeUsers(base: Profile[], incoming: Profile[]): Profile[] {
@@ -25,7 +29,7 @@ function mergeUsers(base: Profile[], incoming: Profile[]): Profile[] {
       username: merged.username || merged.email.split("@")[0] || "learner",
     });
   }
-  return excludeCurrentUser(Array.from(map.values()));
+  return excludeSimulatedUsers(Array.from(map.values()));
 }
 
 function broadcast(channel: string, payload: unknown) {
@@ -60,7 +64,7 @@ export const useDirectoryStore = create<DirectoryState>()(
         set({ users: mergeUsers(get().users, incoming) });
       },
       replaceUsers: (users) => {
-        set({ users: excludeCurrentUser(users) });
+        set({ users: excludeSimulatedUsers(users) });
       },
       touchPresence: (id, lastSeenAt, emit = false) => {
         const currentUser = useAuthStore.getState().user;
@@ -78,7 +82,7 @@ export const useDirectoryStore = create<DirectoryState>()(
         const stored = (persisted as { users?: Profile[] } | undefined)?.users ?? [];
         return {
           ...current,
-          users: excludeCurrentUser(stored),
+          users: excludeSimulatedUsers(stored),
         };
       },
     }
