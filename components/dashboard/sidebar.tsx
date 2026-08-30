@@ -33,18 +33,24 @@ const ADMIN = [
   { href: "/admin/tickets", label: "Tickets", icon: LifeBuoy },
 ];
 
-export function DashboardSidebar({ variant }: { variant: "student" | "admin" }) {
+export function DashboardSidebar({
+  variant,
+  onNavigate,
+}: {
+  variant: "student" | "admin";
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const links = variant === "admin" ? ADMIN : STUDENT;
 
   return (
-    <aside className="flex h-full flex-col border-r border-border/70 bg-card/40 p-4 backdrop-blur-xl">
-      <Link href="/" className="px-2 py-1">
+    <aside className="flex h-full min-h-0 flex-col border-r border-border/70 bg-card/40 p-4 backdrop-blur-xl">
+      <Link href="/" className="px-2 py-1" onClick={onNavigate}>
         <ZingerLogo />
       </Link>
-      <nav className="mt-8 flex flex-1 flex-col gap-1">
+      <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
         {links.map((l) => {
           const active =
             l.href === "/dashboard"
@@ -54,6 +60,7 @@ export function DashboardSidebar({ variant }: { variant: "student" | "admin" }) 
             <Link
               key={l.href}
               href={l.href}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition",
                 active ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-secondary"
@@ -67,6 +74,7 @@ export function DashboardSidebar({ variant }: { variant: "student" | "admin" }) 
         {user?.role === "admin" && variant === "student" ? (
           <Link
             href="/admin"
+            onClick={onNavigate}
             className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-muted-foreground hover:bg-secondary"
           >
             <Shield className="h-4 w-4" />
@@ -74,7 +82,7 @@ export function DashboardSidebar({ variant }: { variant: "student" | "admin" }) 
           </Link>
         ) : null}
       </nav>
-      <div className="rounded-xl border border-border/60 p-3">
+      <div className="mt-3 shrink-0 rounded-xl border border-border/60 p-3">
         <div className="flex items-center gap-3">
           <UserAvatar
             name={user?.fullName ?? "Guest"}
@@ -94,6 +102,7 @@ export function DashboardSidebar({ variant }: { variant: "student" | "admin" }) 
           size="sm"
           className="mt-2 w-full justify-start"
           onClick={async () => {
+            onNavigate?.();
             await signOut();
             router.push("/");
             router.refresh();

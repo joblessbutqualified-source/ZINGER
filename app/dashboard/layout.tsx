@@ -3,8 +3,8 @@
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
+import { MobileHeader } from "@/components/dashboard/mobile-header";
 import { RequireAuth } from "@/components/dashboard/require-auth";
-import { Navbar } from "@/components/landing/navbar";
 import { PresenceSync } from "@/components/providers/presence-sync";
 import { cn } from "@/lib/utils";
 
@@ -16,16 +16,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     <RequireAuth>
       <PresenceSync />
       <div className={cn("flex flex-col", isChat ? "h-dvh overflow-hidden" : "min-h-screen")}>
-        <div className="shrink-0 lg:hidden">
-          <Navbar />
-        </div>
+        <MobileHeader variant="student" />
+        <div className="h-16 shrink-0 md:hidden" aria-hidden />
         <div
           className={cn(
-            "lg:grid lg:grid-cols-[260px_1fr]",
+            "md:grid md:grid-cols-[260px_1fr]",
             isChat && "min-h-0 flex-1 overflow-hidden"
           )}
         >
-          <div className={cn("sticky top-0 hidden lg:block", isChat ? "h-full" : "h-screen")}>
+          <div
+            className={cn(
+              "sticky top-0 hidden md:block",
+              isChat ? "h-full" : "h-screen"
+            )}
+          >
             <DashboardSidebar variant="student" />
           </div>
           <div
