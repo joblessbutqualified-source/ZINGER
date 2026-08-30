@@ -91,6 +91,11 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+function isUuid(id: string | undefined | null): boolean {
+  if (!id) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
 export async function fetchDirectoryFromSupabase(currentUserId?: string): Promise<Profile[]> {
   const supabase = createClient();
   if (!supabase || !isSupabaseConfigured()) return [];
@@ -99,11 +104,19 @@ export async function fetchDirectoryFromSupabase(currentUserId?: string): Promis
   if (authError) console.error(authError);
 
   const currentUser = {
-    id: currentUserId ?? authData.user?.id ?? useAuthStore.getState().user?.id,
+    id: [authData.user?.id, currentUserId, useAuthStore.getState().user?.id].find(isUuid) ??
+      authData.user?.id ??
+      currentUserId ??
+      useAuthStore.getState().user?.id,
   };
   if (!currentUser.id) return [];
 
-  const { data, error } = await supabase.from("profiles").select("*").neq("id", currentUser.id);
+  let query = supabase.from("profiles").select("*");
+  if (isUuid(currentUser.id)) {
+    query = query.neq("id", currentUser.id);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error(error);
@@ -115,7 +128,9 @@ export async function fetchDirectoryFromSupabase(currentUserId?: string): Promis
     throw error;
   }
   if (!data) return [];
-  return (data as ProfileRow[]).map(mapProfileRow).filter((p) => p.id !== currentUser.id);
+  return (data as ProfileRow[])
+    .map(mapProfileRow)
+    .filter((p) => p.id !== currentUser.id && p.id !== authData.user?.id);
 }
 
 export { mapChatRow, mapProfileRow };

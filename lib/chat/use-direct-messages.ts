@@ -91,9 +91,7 @@ export function useDirectMessages() {
         try {
           const authId = await getAuthUserId();
           if (cancelled) return;
-          if (authId && authId !== sessionUserId) {
-            await loadProfileForAuthUser();
-          }
+          await loadProfileForAuthUser();
           const selfId = authId ?? useAuthStore.getState().user?.id ?? sessionUserId;
           const people = await fetchDirectoryFromSupabase(selfId);
           if (cancelled) return;

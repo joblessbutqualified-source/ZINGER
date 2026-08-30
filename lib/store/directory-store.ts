@@ -1,14 +1,15 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import { DM_DIRECTORY_CHANNEL, DM_PRESENCE_CHANNEL } from "@/lib/chat/channels";
 import { SEED_USER_IDS } from "@/lib/chat/seed-users";
 import { useAuthStore } from "@/lib/store/auth-store";
 import type { Profile } from "@/lib/types";
 
 function isDirectoryPeer(user: Profile): boolean {
-  if (SEED_USER_IDS.has(user.id) || user.id.startsWith("usr_peer_")) return false;
+  if (SEED_USER_IDS.has(user.id) || user.id.startsWith("usr_peer_") || user.id.startsWith("usr_")) {
+    return false;
+  }
   const currentUser = useAuthStore.getState().user;
   if (!currentUser) return true;
   return user.id !== currentUser.id;
@@ -47,41 +48,26 @@ interface DirectoryState {
   touchPresence: (id: string, lastSeenAt: string, emit?: boolean) => void;
 }
 
-export const useDirectoryStore = create<DirectoryState>()(
-  persist(
-    (set, get) => ({
-      users: [],
-      upsertUser: (user) => {
-        if (!isDirectoryPeer(user)) return;
-        const users = mergeUsers(get().users, [user]);
-        set({ users });
-        broadcast(DM_DIRECTORY_CHANNEL, user);
-      },
-      mergeRemote: (incoming) => {
-        set({ users: mergeUsers(get().users, incoming) });
-      },
-      replaceUsers: (users) => {
-        set({ users: realPeersOnly(users) });
-      },
-      touchPresence: (id, lastSeenAt, emit = false) => {
-        const currentUser = useAuthStore.getState().user;
-        if (currentUser && id === currentUser.id) return;
-        set({
-          users: get().users.map((u) => (u.id === id ? { ...u, lastSeenAt } : u)),
-        });
-        if (emit) broadcast(DM_PRESENCE_CHANNEL, { id, lastSeenAt });
-      },
-    }),
-    {
-      name: "zinger-directory",
-      partialize: (s) => ({ users: s.users }),
-      merge: (persisted, current) => {
-        const stored = (persisted as { users?: Profile[] } | undefined)?.users ?? [];
-        return {
-          ...current,
-          users: realPeersOnly(stored),
-        };
-      },
-    }
-  )
-);
+export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
+  users: [],
+  upsertUser: (user) => {
+    if (!isDirectoryPeer(user)) return;
+    const users = mergeUsers(get().users, [user]);
+    set({ users });
+    broadcast(DM_DIRECTORY_CHANNEL, user);
+  },
+  mergeRemote: (incoming) => {
+    set({ users: mergeUsers(get().users, incoming) });
+  },
+  replaceUsers: (users) => {
+    set({ users: realPeersOnly(users) });
+  },
+  touchPresence: (id, lastSeenAt, emit = false) => {
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser && id === currentUser.id) return;
+    set({
+      users: get().users.map((u) => (u.id === id ? { ...u, lastSeenAt } : u)),
+    });
+    if (emit) broadcast(DM_PRESENCE_CHANNEL, { id, lastSeenAt });
+  },
+}));
