@@ -338,11 +338,6 @@ export function useDirectMessages() {
   }, [directory, messages, query, tick, user, live]);
 
   useEffect(() => {
-    if (directoryLoading || peerId || people.length === 0) return;
-    selectPeer(people[0].id);
-  }, [directoryLoading, peerId, people, selectPeer]);
-
-  useEffect(() => {
     if (peerId) void markRead(peerId);
   }, [peerId, messages.length, markRead]);
 

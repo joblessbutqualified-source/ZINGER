@@ -2,10 +2,12 @@
 
 import { FormEvent, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { usePathname } from "next/navigation";
 import { Bot, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getBotReply } from "@/lib/data/chatbot";
+import { cn } from "@/lib/utils";
 
 interface Line {
   id: string;
@@ -14,6 +16,8 @@ interface Line {
 }
 
 export function AIChatbot() {
+  const pathname = usePathname();
+  const hideOnMobileChat = pathname === "/dashboard/chat";
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [lines, setLines] = useState<Line[]>([
@@ -39,7 +43,12 @@ export function AIChatbot() {
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-50">
+    <div
+      className={cn(
+        "fixed bottom-5 right-5 z-50",
+        hideOnMobileChat && "hidden md:block"
+      )}
+    >
       <AnimatePresence>
         {open ? (
           <motion.div

@@ -45,7 +45,7 @@ export function DirectMessages() {
 
   if (!user) {
     return (
-      <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+      <div className="flex h-full items-center justify-center rounded-none border-dashed border-border p-10 text-center text-sm text-muted-foreground">
         Sign in to open DMs.
       </div>
     );
@@ -59,14 +59,14 @@ export function DirectMessages() {
   };
 
   return (
-    <div className="flex h-full min-h-[560px] overflow-hidden border-border/70 bg-card/40 shadow-2xl backdrop-blur-xl lg:rounded-none">
+    <div className="flex h-full min-h-0 w-full overflow-hidden border-border/70 bg-card/40 shadow-2xl backdrop-blur-xl">
       <aside
         className={cn(
-          "w-full shrink-0 border-r border-border/60 lg:w-[340px]",
-          peerId ? "hidden lg:flex lg:flex-col" : "flex flex-col"
+          "h-full min-h-0 w-full flex-col md:w-[350px] md:shrink-0 md:border-r md:border-border/60",
+          peerId ? "hidden md:flex" : "flex"
         )}
       >
-        <div className="border-b border-border/60 px-4 py-4">
+        <div className="shrink-0 border-b border-border/60 px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="font-display text-xl">Messages</h1>
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -83,7 +83,7 @@ export function DirectMessages() {
             />
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {directoryLoading ? (
             <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-sm text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -108,12 +108,12 @@ export function DirectMessages() {
 
       <section
         className={cn(
-          "min-w-0 flex-1 flex-col",
-          peerId ? "flex" : "hidden lg:flex"
+          "h-full min-h-0 min-w-0 flex-1 flex-col",
+          peerId ? "flex" : "hidden md:flex"
         )}
       >
         {!peer ? (
-          <div className="flex flex-1 flex-col items-center justify-center text-center">
+          <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
             <MessageCircle className="h-10 w-10 text-primary" />
             <p className="mt-4 font-display text-2xl">Your messages</p>
             <p className="mt-1 max-w-xs text-sm text-muted-foreground">
@@ -122,15 +122,16 @@ export function DirectMessages() {
           </div>
         ) : (
           <>
-            <header className="flex items-center gap-3 border-b border-border/60 px-3 py-3">
+            <header className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3 py-3 md:gap-3">
               <Button
                 variant="ghost"
-                size="icon"
-                className="lg:hidden"
+                size="sm"
+                className="-ml-1 shrink-0 gap-1 px-2 md:hidden"
                 onClick={() => selectPeer(null)}
                 aria-label="Back to conversations"
               >
                 <ArrowLeft className="h-4 w-4" />
+                Back
               </Button>
               <UserAvatar
                 name={peer.fullName}
@@ -145,7 +146,10 @@ export function DirectMessages() {
               </div>
             </header>
 
-            <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+            <div
+              ref={listRef}
+              className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4"
+            >
               {thread.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center text-center">
                   <UserAvatar name={peer.fullName} src={peer.avatarUrl} size="lg" />
@@ -165,43 +169,48 @@ export function DirectMessages() {
               <div ref={bottomRef} />
             </div>
 
-            <form onSubmit={onSend} className="relative border-t border-border/60 p-3">
-              {emojiOpen ? (
-                <div className="absolute bottom-16 left-3 z-10">
-                  <EmojiPicker
-                    onPick={(e) => {
-                      setDraft((d) => d + e);
+            <form
+              onSubmit={onSend}
+              className="sticky bottom-0 z-10 shrink-0 border-t border-border/60 bg-card/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl"
+            >
+              <div className="relative">
+                {emojiOpen ? (
+                  <div className="absolute bottom-12 left-0 z-10">
+                    <EmojiPicker
+                      onPick={(e) => {
+                        setDraft((d) => d + e);
+                      }}
+                    />
+                  </div>
+                ) : null}
+                <div className="flex items-end gap-2">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Emoji picker"
+                    onClick={() => setEmojiOpen((v) => !v)}
+                  >
+                    <Smile className="h-5 w-5" />
+                  </Button>
+                  <Input
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder="Message…"
+                    className="rounded-full"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void sendMessage(draft);
+                        setDraft("");
+                        setEmojiOpen(false);
+                      }
                     }}
                   />
+                  <Button type="submit" size="icon" aria-label="Send" disabled={!draft.trim()}>
+                    <Send className="h-4 w-4" />
+                  </Button>
                 </div>
-              ) : null}
-              <div className="flex items-end gap-2">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  aria-label="Emoji picker"
-                  onClick={() => setEmojiOpen((v) => !v)}
-                >
-                  <Smile className="h-5 w-5" />
-                </Button>
-                <Input
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Message…"
-                  className="rounded-full"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      void sendMessage(draft);
-                      setDraft("");
-                      setEmojiOpen(false);
-                    }
-                  }}
-                />
-                <Button type="submit" size="icon" aria-label="Send" disabled={!draft.trim()}>
-                  <Send className="h-4 w-4" />
-                </Button>
               </div>
             </form>
           </>
