@@ -97,14 +97,33 @@ function isUuid(id: string | undefined | null): boolean {
 }
 
 export async function fetchDirectoryFromSupabase(currentUserId?: string): Promise<Profile[]> {
+  const selfIds = new Set(
+    [currentUserId, useAuthStore.getState().user?.id].filter(Boolean) as string[]
+  );
+
+  try {
+    const res = await fetch("/api/chat/directory", { cache: "no-store", credentials: "include" });
+    const payload = (await res.json()) as { users?: Profile[]; error?: string };
+    if (res.ok && Array.isArray(payload.users)) {
+      return payload.users.filter((p) => !selfIds.has(p.id));
+    }
+    if (!res.ok && payload.error) {
+      console.error(payload.error);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
   const supabase = createClient();
   if (!supabase || !isSupabaseConfigured()) return [];
 
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError) console.error(authError);
+  if (authData.user?.id) selfIds.add(authData.user.id);
 
   const currentUser = {
-    id: [authData.user?.id, currentUserId, useAuthStore.getState().user?.id].find(isUuid) ??
+    id:
+      [authData.user?.id, currentUserId, useAuthStore.getState().user?.id].find(isUuid) ??
       authData.user?.id ??
       currentUserId ??
       useAuthStore.getState().user?.id,
@@ -130,7 +149,7 @@ export async function fetchDirectoryFromSupabase(currentUserId?: string): Promis
   if (!data) return [];
   return (data as ProfileRow[])
     .map(mapProfileRow)
-    .filter((p) => p.id !== currentUser.id && p.id !== authData.user?.id);
+    .filter((p) => !selfIds.has(p.id) && p.id !== currentUser.id);
 }
 
 export { mapChatRow, mapProfileRow };

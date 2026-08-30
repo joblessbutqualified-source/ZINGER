@@ -52,23 +52,14 @@ export function PresenceSync() {
     };
 
     void beat();
-    if (live) {
-      void (async () => {
-        const supabase = createClient();
-        const { data: authData } = supabase
-          ? await supabase.auth.getUser()
-          : { data: { user: null } };
-        const selfId = authData.user?.id ?? userId;
-        try {
-          const people = await fetchDirectoryFromSupabase(selfId);
-          useDirectoryStore.getState().replaceUsers(people);
-        } catch (err) {
-          console.error(err);
-        }
-      })();
-    } else {
-      useDirectoryStore.getState().replaceUsers([]);
-    }
+    void (async () => {
+      try {
+        const people = await fetchDirectoryFromSupabase(userId);
+        useDirectoryStore.getState().replaceUsers(people);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
 
     const id = window.setInterval(() => void beat(), 20_000);
     return () => window.clearInterval(id);
